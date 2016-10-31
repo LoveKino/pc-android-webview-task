@@ -1,0 +1,19 @@
+{
+  "name": "pc-android-webview-task",
+  "version": "0.0.1",
+  "description": "pc android webview task",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LoveKino/pc-android-webview-task.git"
+  },
+  "author": "ddchen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/LoveKino/pc-android-webview-task/issues"
+  },
+  "homepage": "https://github.com/LoveKino/pc-android-webview-task#readme"
+}
