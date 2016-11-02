@@ -1,9 +1,9 @@
 package com.ddchen.bridge.adbpc;
 
 import com.ddchen.bridge.adbpc.MonitorCommand.ExecuteCommand;
-import com.ddchen.bridge.pc.MessageHandler;
+import com.ddchen.bridge.pc.PC;
 import com.ddchen.bridge.pcinterface.Caller;
-import com.ddchen.bridge.pcinterface.HandleCallResult;
+import com.ddchen.bridge.pcinterface.Listener;
 import com.ddchen.bridge.pcinterface.Sender;
 
 import org.json.JSONException;
@@ -11,9 +11,6 @@ import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
-
-import static com.ddchen.bridge.pc.AssemblePCData.assembleRequestData;
 
 /**
  * Created by yuer on 10/19/16.
@@ -60,20 +57,6 @@ public class AdbPc {
     public AdbPc() {
     }
 
-    private Sender getSender(final String channel, String outputDirName) {
-        final AdbSender adbSender = new AdbSender(outputDirName);
-        return new Sender() {
-            @Override
-            public void send(Object msg) {
-                try {
-                    adbSender.send(wrapChannel(msg, channel));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-    }
-
     /**
      * @param channel       used to monitor information from PC
      * @param outputDirName used to send information to PC
@@ -84,59 +67,35 @@ public class AdbPc {
     public Caller pc(final String channel, String outputDirName, final Map sandbox) {
         final Sender sender = getSender(channel, outputDirName);
 
-        final MessageHandler handler = new MessageHandler(sandbox, sender, idMap);
-
-        MonitorCommand.monitor(channel, new ExecuteCommand() {
+        Listener listener = new Listener() {
             @Override
-            public void execute(String command) {
-                /**
-                 * 1. parse command (call command)
-                 * 2. execute command
-                 * 3. send results
-                 */
-                try {
-                    JSONObject jObject = new JSONObject(command);
-                    handler.handle(jObject);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            public void listen(final ListenHandler listenHandler) {
+                MonitorCommand.monitor(channel, new ExecuteCommand() {
+                    @Override
+                    public void execute(String command) {
+                        try {
+                            JSONObject jObject = new JSONObject(command);
+                            listenHandler.handle(jObject);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
             }
-        });
+        };
 
-        return new Caller() {
-            /**
-             * {
-             *     channel: "/data/user/0/com.freekite.android.yard.adbcontest1/files/aosp_hook/command.json",
-             *     data: {
-             *         type: "request",
-             *         data: {
-             *             id: 1,
-             *             source: {
-             *                 type: "public",
-             *                 name: "add",
-             *                 args: [{
-             *                     type: "jsonItem",
-             *                     arg: 1
-             *                 }, {
-             *                     type: "jsonItem",
-             *                     arg: 2
-             *                 }]
-             *             }
-             *         }
-             *     }
-             * }
-             */
+        return new PC(listener, sender, sandbox).getCaller();
+    }
+
+    private Sender getSender(final String channel, String outputDirName) {
+        final AdbSender adbSender = new AdbSender(outputDirName);
+        return new Sender() {
             @Override
-            public void call(String name, Object[] args, HandleCallResult handleCallResult) {
-                // generate id
-                String id = UUID.randomUUID().toString();
-                // map id
-                idMap.put(id, handleCallResult);
-
+            public void send(Object msg) {
                 try {
-                    sender.send(assembleRequestData(name, args, id));
+                    adbSender.send(wrapChannel(msg, channel));
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }

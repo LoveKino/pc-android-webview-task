@@ -1,6 +1,7 @@
 package com.ddchen.bridge.pc;
 
-import com.ddchen.bridge.pcinterface.HandleCallResult;
+import com.ddchen.bridge.pc.Promise.Callable;
+import com.ddchen.bridge.pc.Promise.Finish;
 import com.ddchen.bridge.pcinterface.Sender;
 
 import org.json.JSONArray;
@@ -20,9 +21,9 @@ import static com.ddchen.bridge.pc.SandboxRuner.getFunctionRet;
 public class MessageHandler {
     private Map sandbox;
     private Sender sender;
-    private Map idMap;
+    private Map<String, Finish> idMap;
 
-    public MessageHandler(Map sandbox, Sender sender, Map idMap) {
+    public MessageHandler(Map sandbox, Sender sender, Map<String, Finish> idMap) {
         this.sandbox = sandbox;
         this.sender = sender;
         this.idMap = idMap;
@@ -61,14 +62,16 @@ public class MessageHandler {
         JSONObject responseData = jObject.getJSONObject("data");
         String id = responseData.getString("id");
         if (idMap.containsKey(id)) {
-            HandleCallResult handleCallResult = (HandleCallResult) idMap.get(id);
-            if (handleCallResult != null) {
+            Finish finish = idMap.get(id);
+            if (finish != null) {
                 if (responseData.has("error") && responseData.get("error") != null) {
-                    handleCallResult.handleError(
-                            (JSONObject) responseData.get("error")
-                    );
+                    finish.reject(responseData.get("error"));
                 } else {
-                    handleCallResult.handle(responseData.get("data"));
+                    if(responseData.has("data")) {
+                        finish.resolve(responseData.get("data"));
+                    } else {
+                        finish.resolve(null);
+                    }
                 }
                 idMap.remove(id);
             }
@@ -80,7 +83,7 @@ public class MessageHandler {
 
     public void handleRequest(JSONObject jObject) throws JSONException {
         JSONObject data = jObject.getJSONObject("data");
-        String id = data.getString("id");
+        final String id = data.getString("id");
 
         JSONObject source = data.getJSONObject("source");
         String methodName = source.getString("name");
@@ -88,7 +91,27 @@ public class MessageHandler {
 
         try {
             if (sandbox.containsKey(methodName)) {
-                sender.send(assembleResponse(getFunctionRet(sandbox, methodName, args), id));
+                Promise.resolve(getFunctionRet(sandbox, methodName, args)).then(new Callable() {
+                    @Override
+                    public Object call(Object prev) {
+                        try {
+                            sender.send(assembleResponse(prev, id));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }
+                }).doCatch(new Callable() {
+                    @Override
+                    public Object call(Object error) {
+                        try {
+                            sender.send(assembleErrorResponse((Exception) error, id));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }
+                });
             } else {
                 throw new Error("missing method " + methodName);
             }
