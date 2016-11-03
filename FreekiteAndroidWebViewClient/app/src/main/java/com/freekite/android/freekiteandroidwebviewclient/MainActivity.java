@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
         AdbPc adbPc = new AdbPc();
 
         String commandDir = "/data/user/0/" + this.getPackageName() + "/files/aosp_hook/output";
-        String channel = "/data/user/0/" + this.getPackageName() + "/files/aosp_hook/command.json";
+        String channel = "/data/user/0/" + this.getPackageName() + "/files/aosp_hook/command";
 
         Map sandbox = new HashMap();
 

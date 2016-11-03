@@ -19,6 +19,8 @@ import java.util.Map;
 public class MonitorCommand {
     private static FileObserver observer = null;
 
+    private static String commandFileName = "command.json";
+
     // handler queue
     // TODO clear or remove monitor API
     private static Map<String, ArrayList<ExecuteCommand>> executeHandlersMap = new HashMap<>();
@@ -28,36 +30,32 @@ public class MonitorCommand {
         void execute(String command);
     }
 
-    public static void monitor(String commandFile, final ExecuteCommand executeCommand) {
+    public static void monitor(String commandDir, final ExecuteCommand executeCommand) {
         if (observer != null) return;
-        final File file = new File(commandFile);
-        file.getParentFile().mkdirs();
-        try {
-            if (!file.exists()) {
-                file.createNewFile();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        new File(commandDir).mkdirs();
 
-        ArrayList<ExecuteCommand> handlers = executeHandlersMap.get(commandFile);
+        final String commandFilePath = commandDir + File.separator + commandFileName;
+
+        ArrayList<ExecuteCommand> handlers = executeHandlersMap.get(commandDir);
         if (handlers == null) {
             handlers = new ArrayList<>();
-            executeHandlersMap.put(commandFile, handlers);
+            executeHandlersMap.put(commandDir, handlers);
         }
         handlers.add(executeCommand);
 
-        FileObserver observer = observerMap.get(commandFile);
+        FileObserver observer = observerMap.get(commandDir);
 
         if (observer == null) {
             final ArrayList<ExecuteCommand> finalHandlers = handlers;
-            observer = new FileObserver(commandFile) {
+            observer = new FileObserver(commandDir) {
                 @Override
                 public void onEvent(int event, String f) {
-                    if (event == FileObserver.CLOSE_WRITE) {
+                    if (commandFileName.equals(f) &&
+                            (event == FileObserver.CLOSE_WRITE || event == FileObserver.MOVED_TO)) {
                         try {
-                            FileInputStream ins = new FileInputStream(file);
-                            byte[] buffer = new byte[(int) file.length()];
+                            File commandFile = new File(commandFilePath);
+                            FileInputStream ins = new FileInputStream(commandFile);
+                            byte[] buffer = new byte[(int) commandFile.length()];
                             ins.read(buffer);
                             String command = new String(buffer);
 
@@ -75,7 +73,7 @@ public class MonitorCommand {
                 }
             };
 
-            observerMap.put(commandFile, observer);
+            observerMap.put(commandDir, observer);
 
             observer.startWatching();
         }

@@ -67,7 +67,7 @@ public class MessageHandler {
                 if (responseData.has("error") && responseData.get("error") != null) {
                     finish.reject(responseData.get("error"));
                 } else {
-                    if(responseData.has("data")) {
+                    if (responseData.has("data")) {
                         finish.resolve(responseData.get("data"));
                     } else {
                         finish.resolve(null);
