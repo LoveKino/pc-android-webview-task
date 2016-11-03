@@ -11,3 +11,9 @@ cp -R ../node_modules/android-pc-communication/android/pc ../FreekiteAndroidWebV
 pushd ../FreekiteAndroidWebViewClient
 ./gradlew build
 popd
+
+rm -rf ../target
+
+mkdir ../target
+
+cp -R ../FreekiteAndroidWebViewClient/app/build/outputs/apk/app-debug.apk ../target/FreekiteAndroidWebViewClient.apk

@@ -30,11 +30,9 @@ public class MonitorCommand {
         void execute(String command);
     }
 
-    public static void monitor(String commandDir, final ExecuteCommand executeCommand) {
+    public static void monitor(final String commandDir, final ExecuteCommand executeCommand) {
         if (observer != null) return;
         new File(commandDir).mkdirs();
-
-        final String commandFilePath = commandDir + File.separator + commandFileName;
 
         ArrayList<ExecuteCommand> handlers = executeHandlersMap.get(commandDir);
         if (handlers == null) {
@@ -50,9 +48,14 @@ public class MonitorCommand {
             observer = new FileObserver(commandDir) {
                 @Override
                 public void onEvent(int event, String f) {
-                    if (commandFileName.equals(f) &&
+                    System.out.println("***********************************");
+                    System.out.println(event);
+                    System.out.println(f);
+                    if (f != null &&
+                            f.indexOf(commandFileName) != -1 &&
                             (event == FileObserver.CLOSE_WRITE || event == FileObserver.MOVED_TO)) {
                         try {
+                            final String commandFilePath = commandDir + File.separator + f;
                             File commandFile = new File(commandFilePath);
                             FileInputStream ins = new FileInputStream(commandFile);
                             byte[] buffer = new byte[(int) commandFile.length()];
